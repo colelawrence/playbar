@@ -5,3 +5,5 @@ authors = ["Cole Lawrence <cole@reaktor.com>"]
 edition = "2018"
 
 [dependencies]
+rodio = { version = "0.8.1", default-features=false, features=["vorbis"]}
+cpal = { version = "0.8" }

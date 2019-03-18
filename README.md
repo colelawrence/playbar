@@ -23,3 +23,9 @@ This is mostly for fun, and the mvp intends to focus on simplicy and usability.
 I'd like to be able to execute `playbar` and have some music play, for now.
 Perhaps a way to mix two stations together would be fun as well.
 We'll see...
+
+## Setup
+
+### Linux
+
+On linux [you may need to](https://github.com/ggez/ggez/issues/100) install development packages for `ALAS` via `sudo apt install libasound2-dev`
