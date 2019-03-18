@@ -48,7 +48,7 @@ fn main() {
     let device = rodio::default_output_device().expect("to find default output device");
 
     let format: Format = device
-        .default_input_format()
+        .default_output_format()
         .expect("device still connected");
 
     let player = WaveSource::new(wave, Duration::from_secs(2), format.sample_rate.0)
