@@ -1,0 +1,12 @@
+[package]
+name = "password"
+version = "0.1.0"
+authors = ["Cole Lawrence <cole@reaktor.com>"]
+edition = "2018"
+
+[dependencies]
+base64 = "0.10.1"
+http_req = "0.4.6"
+ring = "0.13.5"
+openssl = "0.10.19"
+rpassword = "2.1.0"
