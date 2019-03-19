@@ -1,15 +1,13 @@
-use base64;
-use openssl::sha;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::ErrorKind;
 
-use super::google::GoogleAuth;
+use sj_token::SJToken;
 
 pub enum SaveState {
     NoneFound,
     Corrupt,
-    Found(GoogleAuth),
+    Found(SJToken),
 }
 
 pub fn read_save_file(config_file_path: &str) -> SaveState {
@@ -24,7 +22,7 @@ pub fn read_save_file(config_file_path: &str) -> SaveState {
                     "Failed to read \"{}\", might need to be reset",
                     config_file_path
                 ));
-            match GoogleAuth::from_save(contents) {
+            match SJToken::from_save(contents) {
                 Ok(save_state) => SaveState::Found(save_state),
                 Err(err) => {
                     eprintln!("Error reading save file: {}", err);
@@ -35,7 +33,7 @@ pub fn read_save_file(config_file_path: &str) -> SaveState {
     }
 }
 
-pub fn save_file(config_file_path: &str, auth: &GoogleAuth) {
+pub fn save_file(config_file_path: &str, auth: &SJToken) {
     let save_file_file: Option<File> = match File::create(config_file_path) {
         Err(err) => match err.kind() {
             ErrorKind::NotFound => match File::create(config_file_path) {

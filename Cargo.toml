@@ -8,10 +8,12 @@ edition = "2018"
 cpal = { version = "0.8" }
 rodio = { version = "0.8.1", default-features=false, features=["mp3"]}
 termcolor = "1"
+password = { path = "./password" }
 
 [workspace]
 members = [
   ".",
+  "sj_token",
   "password",
   "password/http_req",
 ]

@@ -1,5 +1,4 @@
-use rodio::{self, Sample, Sink, Source};
-use std::thread;
+use rodio::{self, Source};
 use std::time::Duration;
 use std::usize;
 
@@ -14,7 +13,6 @@ pub struct WaveConfig {
 }
 
 pub struct WaveSource {
-    config: WaveConfig,
     channels: u16,
     sample_rate: u32,
     buffer: Vec<f32>,
@@ -54,7 +52,6 @@ impl WaveSource {
         let total_samples = ((length.as_millis() * sample_rate as u128) / 1000) as usize;
 
         WaveSource {
-            config: config,
             channels: 1,
             sample_rate: sample_rate,
             buffer: buffer,

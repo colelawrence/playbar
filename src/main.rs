@@ -1,14 +1,16 @@
 use cpal::Format;
-use rodio::{self, Sample, Sink, Source};
+use rodio::{self, Source};
 use std::thread;
 use std::time::Duration;
 
-mod input;
+mod ui;
 mod wave;
 
-use input::input;
 use wave::{WaveConfig, WaveKind, WaveSource};
 
+use password::retrieve_credentials;
+
+#[allow(unconditional_recursion)]
 fn main() {
     // use std::fs::File;
     // use std::io::BufReader;
@@ -25,10 +27,12 @@ fn main() {
 
     // thread::sleep(Duration::from_millis(4500));
     // return;
+    retrieve_credentials(".playbar");
+
     println!("Let's hear a wave!");
     print!("Please input a Hz for a sine wave: ");
     let value: usize = loop {
-        let test_value = input();
+        let test_value = ui::input();
         match usize::from_str_radix(&test_value, 10u32) {
             Ok(hz) => break hz,
             Err(parse_err) => {
