@@ -1,0 +1,3 @@
+[submodule "password/http_req"]
+	path = password/http_req
+	url = git@github.com:colelawrence/http_req.git
