@@ -15,6 +15,8 @@ use openssl::{bn, pkey, rsa};
 use ring::{self, digest};
 use rpassword::prompt_password_stderr;
 
+mod util;
+
 pub struct EncryptedPw(Vec<u8>);
 
 impl EncryptedPw {
@@ -22,21 +24,24 @@ impl EncryptedPw {
         base64::encode(&self.0).replace('+', "-").replace('/', "_")
     }
 }
-const GOOGLE_DEFAULT_PUBLIC_KEY: &str = "AAAAgMom/1a/v0lblO2Ubrt60J2gcuXSljGFQXgcyZWveWLEwo6prwgi3iJIZdodyhKZQrNWp5nKJ3srRXcUW+F1BD3baEVGcmEgqaLZUNBjm057pKRI16kB0YppeGx5qIQ5QjKzsR8ETQbKLNWgRY0QRNVz34kMJR3P/LgHax/6rmf5AAAAAwEAAQ==";
 
 pub fn input_password_and_encrypt(username: &str) -> EncryptedPw {
     let password: String = String::from("examplepassword"); // prompt_password_stderr("Password: ").unwrap();
-    encrypt_login(username, password)
+    encrypt_login(username.to_string(), password)
 }
+
+// RSA operations
+
+const GOOGLE_DEFAULT_PUBLIC_KEY: &str = "AAAAgMom/1a/v0lblO2Ubrt60J2gcuXSljGFQXgcyZWveWLEwo6prwgi3iJIZdodyhKZQrNWp5nKJ3srRXcUW+F1BD3baEVGcmEgqaLZUNBjm057pKRI16kB0YppeGx5qIQ5QjKzsR8ETQbKLNWgRY0QRNVz34kMJR3P/LgHax/6rmf5AAAAAwEAAQ==";
 
 /// Decompose Google's public key into modulus and exponent components into RSA Public key
 fn decompose(public_key: &[u8]) -> rsa::Rsa<pkey::Public> {
     let u32_len = 4;
-    let mod_len = read_u32_be(&public_key) as usize;
+    let mod_len = util::read_u32_be(&public_key) as usize;
     let mod_offset = u32_len;
     let mod_bin = &public_key[mod_offset..mod_offset + mod_len];
     let exp_offset = mod_offset + mod_len + u32_len;
-    let exp_len = read_u32_be(&public_key[mod_len + mod_offset..]) as usize;
+    let exp_len = util::read_u32_be(&public_key[mod_len + mod_offset..]) as usize;
     let exp_bin = &public_key[exp_offset..exp_offset + exp_len];
 
     let n_mod = bn::BigNum::from_slice(mod_bin).unwrap();
@@ -45,62 +50,49 @@ fn decompose(public_key: &[u8]) -> rsa::Rsa<pkey::Public> {
     rsa::Rsa::<pkey::Public>::from_public_components(n_mod, e_exp).unwrap()
 }
 
-fn encrypt_login(username: &str, password: String) -> EncryptedPw {
+fn encrypt_login(username: String, password: String) -> EncryptedPw {
     let public_key: Vec<u8> = base64::decode(GOOGLE_DEFAULT_PUBLIC_KEY).unwrap();
 
-    let mut data: Vec<u8> = username.to_string().into_bytes();
-    data.push(0u8);
-    data.append(&mut password.into_bytes());
+    let signature: Vec<u8> = {
+        let mut context = digest::Context::new(&digest::SHA1);
+        context.update(&public_key);
+        let digest = context.finish();
+        let digest_ref = digest.as_ref();
 
-    let mut context = digest::Context::new(&digest::SHA1);
-    context.update(&public_key);
-    let digest = context.finish();
-    let digest_ref = digest.as_ref();
-    let signature: Vec<u8> = vec![
-        0u8,
-        digest_ref[0],
-        digest_ref[1],
-        digest_ref[2],
-        digest_ref[3],
-    ];
-    let signature_len = signature.len();
+        vec![
+            0u8,
+            digest_ref[0],
+            digest_ref[1],
+            digest_ref[2],
+            digest_ref[3],
+        ]
+    };
 
     let rsa = decompose(&public_key);
 
+    // to store the encrypted contents
     let mut encrypted_buf = vec![0u8; rsa.size() as usize];
-    let mut res = signature;
-    res.append(&mut encrypted_buf);
 
+    // ${username}\x00${password}
+    let username_password: Vec<u8> = {
+        let mut res = vec![];
+        res.append(&mut username.into_bytes());
+        res.push(0u8);
+        res.append(&mut password.into_bytes());
+        res
+    };
+
+    // encrypt into the space after the signature
     let encrypted_len = rsa
-        .public_encrypt(&data, &mut res[signature_len..], rsa::Padding::PKCS1)
+        .public_encrypt(&username_password, &mut encrypted_buf, rsa::Padding::PKCS1)
         .expect("public encrypt into buf works");
 
-    EncryptedPw(res[..signature_len + encrypted_len].into())
-}
+    let encrypted_data = &mut encrypted_buf[..encrypted_len].into();
 
-/// Read the first 4 bits as a u32 big endian
-///
-///  # Panics
-///
-/// Panics if slice is smaller than 4 elements
-fn read_u32_be(slice: &[u8]) -> u32 {
-    as_u32_be(&pop4(&slice).unwrap())
-}
+    let mut res = signature;
+    res.append(encrypted_data);
 
-// Source: https://stackoverflow.com/a/36676814/2096729
-fn as_u32_be(array: &[u8; 4]) -> u32 {
-    ((array[0] as u32) << 24)
-        + ((array[1] as u32) << 16)
-        + ((array[2] as u32) << 8)
-        + ((array[3] as u32) << 0)
-}
-
-fn pop4(four: &[u8]) -> Result<[u8; 4], &'static str> {
-    if four.len() < 4 {
-        Err("pop4: slice length less than 4")
-    } else {
-        Ok([four[0], four[1], four[2], four[3]])
-    }
+    EncryptedPw(res.into())
 }
 
 #[cfg(test)]
