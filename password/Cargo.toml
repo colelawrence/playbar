@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 base64 = "0.10.1"
-http_req = "0.4.6"
-ring = "0.13.5"
+http_req = { path = "./http_req" }
 openssl = "0.10.19"
 rpassword = "2.1.0"
+percent-encoding = "1.0.1"

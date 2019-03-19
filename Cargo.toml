@@ -13,4 +13,5 @@ termcolor = "1"
 members = [
   ".",
   "password",
+  "password/http_req",
 ]

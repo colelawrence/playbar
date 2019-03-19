@@ -11,8 +11,7 @@
  */
 
 use base64;
-use openssl::{bn, pkey, rsa};
-use ring::{self, digest};
+use openssl::{bn, pkey, rsa, sha};
 use rpassword::prompt_password_stderr;
 
 mod util;
@@ -26,7 +25,7 @@ impl EncryptedPw {
 }
 
 pub fn input_password_and_encrypt(username: &str) -> EncryptedPw {
-    let password: String = String::from("examplepassword"); // prompt_password_stderr("Password: ").unwrap();
+    let password: String = prompt_password_stderr("Password: ").unwrap();
     encrypt_login(username.to_string(), password)
 }
 
@@ -54,7 +53,7 @@ fn encrypt_login(username: String, password: String) -> EncryptedPw {
     let public_key: Vec<u8> = base64::decode(GOOGLE_DEFAULT_PUBLIC_KEY).unwrap();
 
     let signature: Vec<u8> = {
-        let mut context = digest::Context::new(&digest::SHA1);
+        let mut context = sha::Sha1::new();
         context.update(&public_key);
         let digest = context.finish();
         let digest_ref = digest.as_ref();
@@ -70,9 +69,6 @@ fn encrypt_login(username: String, password: String) -> EncryptedPw {
 
     let rsa = decompose(&public_key);
 
-    // to store the encrypted contents
-    let mut encrypted_buf = vec![0u8; rsa.size() as usize];
-
     // ${username}\x00${password}
     let username_password: Vec<u8> = {
         let mut res = vec![];
@@ -82,12 +78,21 @@ fn encrypt_login(username: String, password: String) -> EncryptedPw {
         res
     };
 
-    // encrypt into the space after the signature
-    let encrypted_len = rsa
-        .public_encrypt(&username_password, &mut encrypted_buf, rsa::Padding::PKCS1)
-        .expect("public encrypt into buf works");
+    let encrypted_data = {
+        // to store the encrypted contents
+        let mut encrypted_buf = vec![0; rsa.size() as usize];
 
-    let encrypted_data = &mut encrypted_buf[..encrypted_len].into();
+        // encrypt into the space after the signature
+        let encrypted_len = rsa
+            .public_encrypt(
+                &username_password,
+                &mut encrypted_buf,
+                rsa::Padding::PKCS1_OAEP,
+            )
+            .expect("public encrypt into buf works");
+
+        &mut encrypted_buf[..encrypted_len].into()
+    };
 
     let mut res = signature;
     res.append(encrypted_data);

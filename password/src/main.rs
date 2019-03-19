@@ -1,4 +1,3 @@
-use http_req::request;
 use std::io::{stdin, stdout, Write};
 
 pub fn input() -> String {
@@ -16,12 +15,40 @@ pub fn input() -> String {
     s
 }
 
+mod google;
 mod password;
+mod save;
+
+use save::SaveState;
 
 fn main() {
-    // eprint!("Google Play username: ");
-    // let username = input();
-    let enc_password = password::input_password_and_encrypt("cole@reaktor.com");
+    let save_file_path = ".playbar";
+    let result = save::read_save_file(save_file_path);
 
-    println!("{}", enc_password.to_url_safe_base64());
+    match result {
+        SaveState::Found(google_auth) => {
+            eprintln!("Successfully loaded credentials file");
+            google_auth
+        }
+        _ => {
+            eprint!("Google Play email: ");
+            let email = input();
+            let enc_password = password::input_password_and_encrypt(&email);
+            let android_id = google::generate_device_id();
+
+            let auth = google::google_login(
+                google::AccountType::EITHER,
+                &email,
+                &enc_password,
+                &android_id,
+            )
+            .expect("successful login");
+
+            save::save_file(save_file_path, &auth);
+
+            println!("Successfully created new credentials file");
+
+            auth
+        }
+    };
 }
