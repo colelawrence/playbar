@@ -8,10 +8,10 @@ mod wave;
 
 use wave::{WaveConfig, WaveKind, WaveSource};
 
-use password::retrieve_credentials;
+use sj_token::SJToken;
 
 #[allow(unconditional_recursion)]
-fn main() {
+pub fn start(token: SJToken) {
     // use std::fs::File;
     // use std::io::BufReader;
 
@@ -27,7 +27,6 @@ fn main() {
 
     // thread::sleep(Duration::from_millis(4500));
     // return;
-    retrieve_credentials(".playbar");
 
     println!("Let's hear a wave!");
     print!("Please input a Hz for a sine wave: ");
@@ -64,5 +63,5 @@ fn main() {
     rodio::play_raw(&device, player);
 
     thread::sleep(Duration::from_millis(1500));
-    main()
+    start(token)
 }

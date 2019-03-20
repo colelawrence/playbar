@@ -1,0 +1,11 @@
+[package]
+name = "sj_ui"
+version = "0.1.0"
+authors = ["Cole Lawrence <colelawr@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+cpal = { version = "0.8" }
+rodio = { version = "0.8.1", default-features=false, features=["mp3"]}
+sj_token = { path = "../sj_token" }
+termcolor = "1"

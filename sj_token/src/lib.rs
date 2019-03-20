@@ -1,5 +1,13 @@
-use openssl::sha;
+//! `SJToken` encode/save and read/decode operations.
+//!
+//! SJ stands for "SkyJam" which is the internal service name for querying the Google Play Music service.
+//! As such, your SJ Token only has access to your SJ service, and does not have any access to your other Google services.
 use base64;
+use openssl::sha;
+use std::fs::File;
+use std::io::prelude::*;
+use std::io::ErrorKind;
+use std::path::Path;
 
 const HASH_LEN: usize = 12;
 const DEVICE_ID_LEN: usize = 16;
@@ -27,7 +35,7 @@ impl SJToken {
     }
 
     /// From file contents
-    pub fn from_save(contents: String) -> Result<Self, &'static str> {
+    pub fn from_string(contents: String) -> Result<Self, &'static str> {
         let (version, tail) = contents.split_at(1);
         match version {
             "0" => {
@@ -48,7 +56,7 @@ impl SJToken {
     }
 
     /// To file contents
-    pub fn to_save(&self) -> Result<String, &'static str> {
+    pub fn to_string(&self) -> Result<String, &'static str> {
         // version 0
         if self.device_id.len() != DEVICE_ID_LEN {
             return Err("device id is invalid length");
@@ -79,4 +87,49 @@ fn hex(bytes: &[u8]) -> String {
         write!(&mut s, "{:02x}", byte).expect("Unable to write");
     }
     s
+}
+
+pub enum SaveState {
+    NoneFound,
+    Corrupt,
+    Found(SJToken),
+}
+
+pub fn read_save_file(config_file_path: &Path) -> SaveState {
+    match File::open(config_file_path) {
+        Err(err) => match err.kind() {
+            ErrorKind::NotFound => SaveState::NoneFound,
+            _ => panic!("Error opening \"{:?}\": {:?}", config_file_path, err),
+        },
+        Ok(file) => {
+            let contents =
+                String::from_utf8(file.bytes().map(Result::unwrap).collect()).expect(&format!(
+                    "Failed to read \"{:?}\", might need to be reset",
+                    config_file_path
+                ));
+            match SJToken::from_string(contents) {
+                Ok(save_state) => SaveState::Found(save_state),
+                Err(err) => {
+                    eprintln!("Error reading save file: {}", err);
+                    SaveState::Corrupt
+                }
+            }
+        }
+    }
+}
+
+pub fn save_file(config_file_path: &Path, auth: &SJToken) {
+    let save_file_file: Option<File> = match File::create(config_file_path) {
+        Err(err) => {
+            eprintln!(
+                "Unable to save credentials to \"{:?}\": {:?}",
+                config_file_path, err
+            );
+            None
+        }
+        Ok(file) => Some(file),
+    };
+
+    save_file_file
+        .map(|mut file| write!(file, "{}", auth.to_string().unwrap()).expect("able to write"));
 }
