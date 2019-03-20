@@ -1,17 +1,29 @@
+#[macro_use]
+extern crate serde_derive;
+
 use cpal::Format;
 use rodio::{self, Source};
 use std::thread;
 use std::time::Duration;
+use futures::future::Future;
+
+use serde_json;
 
 mod ui;
 mod wave;
+mod sj;
+
+use actix_web::actix;
 
 use wave::{WaveConfig, WaveKind, WaveSource};
 
-use sj_token::SJToken;
+pub use sj_token::SJAccess;
 
 #[allow(unconditional_recursion)]
-pub fn start(token: SJToken) {
+pub fn start(token: SJAccess) {
+    let mut sys = actix::System::new("test");
+
+    // start_ui(token, &sys);
     // use std::fs::File;
     // use std::io::BufReader;
 
@@ -27,6 +39,20 @@ pub fn start(token: SJToken) {
 
     // thread::sleep(Duration::from_millis(4500));
     // return;
+
+    let res = sj::query::query(&token, sj::query::SearchParams {
+        categories: &[6],
+        max_results: 1,
+        query: "elephant gun"
+    }).inspect(|result| {
+        println!("{:?}", serde_json::to_string_pretty(&result))
+    });
+
+    match sys.block_on(res) {
+        Ok(value) => (),
+        Err(err) => eprintln!("Error during search {:?}", err),
+    }
+
 
     println!("Let's hear a wave!");
     print!("Please input a Hz for a sine wave: ");
@@ -63,5 +89,10 @@ pub fn start(token: SJToken) {
     rodio::play_raw(&device, player);
 
     thread::sleep(Duration::from_millis(1500));
-    start(token)
+    // start_ui(token, sys);
+
+    sys.run();
 }
+
+// fn start_ui(token: SJAccess, sys: &actix::system::SystemRunner) {
+// }

@@ -13,11 +13,27 @@ const HASH_LEN: usize = 12;
 const DEVICE_ID_LEN: usize = 16;
 
 pub struct SJToken {
+    pub auth: String,
+    pub mt: String,
+    pub email: String,
+    pub device_id: String,
+}
+
+pub struct SJAccess {
     auth: String,
     device_id: String,
 }
 
 impl SJToken {
+    pub fn access_only(&self) -> SJAccess {
+        SJAccess {
+            auth: self.auth.clone(),
+            device_id: self.device_id.clone(),
+        }
+    }
+}
+
+impl SJAccess {
     /// "Authorization"
     pub fn authorization_value(&self) -> String {
         format!("GoogleLogin auth={}", self.auth)
@@ -26,11 +42,15 @@ impl SJToken {
     pub fn x_device_id_value(&self) -> String {
         self.device_id.clone()
     }
+}
 
-    pub fn new(auth: &str, device_id: &str) -> Self {
+impl SJToken {
+    pub fn new(mt: &str, auth: &str, email: &str, device_id: &str) -> Self {
         SJToken {
             auth: auth.to_string(),
+            mt: mt.to_string(),
             device_id: device_id.to_string(),
+            email: email.to_string(),
         }
     }
 
@@ -46,6 +66,29 @@ impl SJToken {
                     Ok(SJToken {
                         device_id: device_id.to_string(),
                         auth: auth.to_string(),
+                        mt: "".to_string(),
+                        email: "".to_string(),
+                    })
+                } else {
+                    Err("corrupt data")
+                }
+            }
+            "1" => {
+                let (hash, tail) = tail.split_at(HASH_LEN);
+                let (device_id, tail) = tail.split_at(DEVICE_ID_LEN);
+                let (auth_len_b, tail) = tail.split_at(3);
+                let auth_len = auth_len_b.parse::<usize>().map_err(|_| "corrupt data")?;
+                let (auth, tail) = tail.split_at(auth_len);
+                let (mt_len_b, tail) = tail.split_at(3);
+                let mt_len = mt_len_b.parse::<usize>().map_err(|_| "corrupt data")?;
+                let (mt, email) = tail.split_at(mt_len);
+                let data_hash = SJToken::hash(device_id, auth);
+                if hash == data_hash {
+                    Ok(SJToken {
+                        device_id: device_id.to_string(),
+                        auth: auth.to_string(),
+                        mt: mt.to_string(),
+                        email: email.to_string(),
                     })
                 } else {
                     Err("corrupt data")
@@ -57,12 +100,21 @@ impl SJToken {
 
     /// To file contents
     pub fn to_string(&self) -> Result<String, &'static str> {
-        // version 0
+        // version 1
         if self.device_id.len() != DEVICE_ID_LEN {
             return Err("device id is invalid length");
         }
         let hash = SJToken::hash(&self.device_id, &self.auth);
-        Ok(format!("0{}{}{}", hash, self.device_id, self.auth))
+        Ok(format!(
+            "1{hash}{device}{auth_len:03}{auth}{mt_len:03}{mt}{email}",
+            hash = hash,
+            device = self.device_id,
+            auth_len = self.auth.len(),
+            auth = self.auth,
+            mt_len = self.mt.len(),
+            mt = self.mt,
+            email = self.email,
+        ))
     }
 
     fn hash(device_id: &str, token: &str) -> String {

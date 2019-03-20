@@ -3,7 +3,6 @@ name = "sj_token"
 version = "0.1.0"
 authors = ["Cole Lawrence <cole@reaktor.com>"]
 edition = "2018"
-private = true
 
 [dependencies]
 base64 = "0.10.1"

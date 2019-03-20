@@ -1,6 +1,6 @@
 use app_dirs::{AppInfo, app_root, AppDataType};
 use sj_ui::start;
-use password::retrieve_credentials;
+use password::{retrieve_credentials, Operation};
 use std::path::PathBuf;
 
 fn get_save_location() -> PathBuf {
@@ -14,5 +14,5 @@ fn get_save_location() -> PathBuf {
 
 fn main() {
     let save_location = get_save_location().with_file_name(".pianobar");
-    start(retrieve_credentials(&save_location))
+    start(retrieve_credentials(&save_location, Operation::ResetAll))
 }
