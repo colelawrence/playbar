@@ -23,16 +23,17 @@ pub fn query(t: &SJAccess, params: SearchParams) -> FutureResponse<SearchRespons
             query_string(&[
                 ("max-results", format!("{}", params.max_results).as_str()),
                 ("q", params.query),
-                ("ic", "true"),
+                ("ic", "true"), // in clusters
                 ("ct", &cts),
-                ("dv", "0"),
-                ("hl", "en"),
-                ("tier", "aa"),
+                ("dv", "0"), // device version
+                ("hl", "en"), // language
+                ("tier", "aa"), // subscribed or not
             ])
         )),
     ))
 }
 
+/// sj#searchresponse
 #[derive(Serialize, Deserialize)]
 pub struct SearchResponse {
     pub kind: String,
@@ -59,21 +60,21 @@ pub struct ClusterDetail {
 #[serde(tag = "type")]
 pub enum ClusterEntry {
     #[serde(rename="1")]
-    Tracks(TrackEntry),
+    Track(TrackEntry),
     #[serde(rename="2")]
-    Artists(ArtistEntry),
+    Artist(ArtistEntry),
     #[serde(rename="3")]
-    Albums(AlbumEntry),
+    Album(AlbumEntry),
     #[serde(rename="4")]
-    Playlists(serde_json::Value),
+    Playlist(serde_json::Value),
     #[serde(rename="5")]
-    Genres(serde_json::Value),
+    Genre(serde_json::Value),
     #[serde(rename="6")]
-    Stations(StationEntry),
+    Station(StationEntry),
     #[serde(rename="7")]
-    Situations(serde_json::Value),
+    Situation(serde_json::Value),
     #[serde(rename="8")]
-    Videos(VideoEntry),
+    Video(VideoEntry),
 }
 
 // Tracks
@@ -85,8 +86,9 @@ pub struct TrackEntry {
     pub cluster: Vec<Cluster>,
 }
 
+/// sj#imageRef
 #[derive(Serialize, Deserialize)]
-pub struct AlbumArtRef {
+pub struct ImageRef {
     pub kind: String,
     pub url: String,
     pub aspectRatio: String,
@@ -105,7 +107,7 @@ pub struct Track {
     pub trackNumber: i64,
     pub genre: String,
     pub durationMillis: String,
-    pub albumArtRef: Vec<AlbumArtRef>,
+    pub albumArtRef: Vec<ImageRef>,
     pub discNumber: i64,
     pub estimatedSize: String,
     pub trackType: String,
@@ -133,16 +135,8 @@ pub struct Artist {
     pub kind: String,
     pub name: String,
     pub artistArtRef: String,
-    pub artistArtRefs: Vec<ArtistArtRefs>,
+    pub artistArtRefs: Vec<ImageRef>,
     pub artistId: String,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct ArtistArtRefs {
-    pub kind: String,
-    pub url: String,
-    pub aspectRatio: String,
-    pub autogen: bool,
 }
 
 // Albums
@@ -183,16 +177,9 @@ pub struct CompositeArtRefs {
     pub aspectRatio: String,
 }
 
+/// sj#radioSeed
 #[derive(Serialize, Deserialize)]
-pub struct ImageUrls {
-    pub kind: String,
-    pub url: String,
-    pub aspectRatio: String,
-    pub autogen: bool,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct Seed {
+pub struct RadioSeed {
     pub kind: String,
     pub curatedStationId: Option<String>,
     pub artistId: Option<String>,
@@ -205,9 +192,9 @@ pub struct Station {
     pub kind: String,
     pub name: String,
     pub description: Option<String>,
-    pub seed: Seed,
-    pub stationSeeds: Vec<Seed>,
-    pub imageUrls: Vec<ImageUrls>,
+    pub seed: RadioSeed,
+    pub stationSeeds: Vec<RadioSeed>,
+    pub imageUrls: Vec<ImageRef>,
     pub compositeArtRefs: Option<Vec<CompositeArtRefs>>,
     pub skipEventHistory: Vec<serde_json::Value>,
     pub contentTypes: Option<Vec<String>>,

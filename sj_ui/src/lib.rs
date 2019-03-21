@@ -66,7 +66,7 @@ pub fn start(token: SJAccess) {
             })
             .flatten()
             .filter_map(|a: sj::query::ClusterEntry| match a {
-                sj::query::ClusterEntry::Stations(stations) => Some(stations.station),
+                sj::query::ClusterEntry::Station(station) => Some(station.station),
                 _ => None,
             })
             .collect();
