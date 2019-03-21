@@ -2,16 +2,19 @@
 extern crate serde_derive;
 
 use cpal::Format;
+use futures::future::{self, Future};
 use rodio::{self, Source};
+use std::iter::Iterator;
 use std::thread;
 use std::time::Duration;
-use futures::future::Future;
 
 use serde_json;
 
+mod sj;
 mod ui;
 mod wave;
-mod sj;
+
+mod test_query_response;
 
 use actix_web::actix;
 
@@ -40,19 +43,41 @@ pub fn start(token: SJAccess) {
     // thread::sleep(Duration::from_millis(4500));
     // return;
 
-    let res = sj::query::query(&token, sj::query::SearchParams {
-        categories: &[6],
-        max_results: 1,
-        query: "elephant gun"
-    }).inspect(|result| {
-        println!("{:?}", serde_json::to_string_pretty(&result))
+
+    // let res = future::result(serde_json::from_str::<sj::query::SearchResponse>(test_query_response::test_1))
+    let res = sj::query::query(
+        &token,
+        sj::query::SearchParams {
+            categories: &[6],
+            max_results: 10,
+            query: "elephant gun",
+        },
+    )
+    .map(|result: sj::query::SearchResponse| {
+        let stations: Vec<sj::query::Station> = result
+            .clusterDetail
+            .into_iter()
+            .filter_map(|a: sj::query::ClusterDetail| {
+                if a.cluster._type == "6" {
+                    a.entries
+                } else {
+                    None
+                }
+            })
+            .flatten()
+            .filter_map(|a: sj::query::ClusterEntry| match a {
+                sj::query::ClusterEntry::Stations(stations) => Some(stations.station),
+                _ => None,
+            })
+            .collect();
+        println!("{}", serde_json::to_string_pretty(&stations).unwrap());
+        stations
     });
 
     match sys.block_on(res) {
-        Ok(value) => (),
+        Ok(_value) => (),
         Err(err) => eprintln!("Error during search {:?}", err),
     }
-
 
     println!("Let's hear a wave!");
     print!("Please input a Hz for a sine wave: ");
