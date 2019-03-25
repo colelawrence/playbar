@@ -25,7 +25,7 @@ pub fn query(t: &SJAccess, params: SearchParams) -> FutureResponse<SearchRespons
                 ("q", params.query),
                 ("ic", "true"), // in clusters
                 ("ct", &cts),
-                ("dv", "0"), // device version
+                ("dv", "17"), // device version
                 ("hl", "en"), // language
                 ("tier", "aa"), // subscribed or not
             ])
@@ -70,7 +70,7 @@ pub enum ClusterEntry {
     #[serde(rename="5")]
     Genre(serde_json::Value),
     #[serde(rename="6")]
-    Station(StationEntry),
+    RadioStation(RadioStationEntry),
     #[serde(rename="7")]
     Situation(serde_json::Value),
     #[serde(rename="8")]
@@ -92,7 +92,7 @@ pub struct ImageRef {
     pub kind: String,
     pub url: String,
     pub aspectRatio: String,
-    pub autogen: bool,
+    pub autogen: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -165,16 +165,9 @@ pub struct Album {
 
 /// type: 6
 #[derive(Serialize, Deserialize)]
-pub struct StationEntry {
-    pub station: Station,
+pub struct RadioStationEntry {
+    pub station: RadioStation,
     pub cluster: Vec<Cluster>,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct CompositeArtRefs {
-    pub kind: String,
-    pub url: String,
-    pub aspectRatio: String,
 }
 
 /// sj#radioSeed
@@ -187,15 +180,16 @@ pub struct RadioSeed {
     pub seedType: String,
 }
 
+/// sj#radioStation
 #[derive(Serialize, Deserialize)]
-pub struct Station {
+pub struct RadioStation {
     pub kind: String,
     pub name: String,
     pub description: Option<String>,
     pub seed: RadioSeed,
     pub stationSeeds: Vec<RadioSeed>,
     pub imageUrls: Vec<ImageRef>,
-    pub compositeArtRefs: Option<Vec<CompositeArtRefs>>,
+    pub compositeArtRefs: Option<Vec<ImageRef>>,
     pub skipEventHistory: Vec<serde_json::Value>,
     pub contentTypes: Option<Vec<String>>,
     pub byline: Option<String>,

@@ -19,7 +19,7 @@ pub fn retrieve_credentials(save_file_path: &Path, operation: Operation) -> SJAc
     let result = read_save_file(save_file_path);
 
     // refresh the token before returning
-    google_login::google_refresh(match result {
+    match result {
         SaveState::Found(sj_token) => {
             let sj_token = match operation {
                 Operation::Login => {
@@ -30,6 +30,7 @@ pub fn retrieve_credentials(save_file_path: &Path, operation: Operation) -> SJAc
                 Operation::ResetAll => login(None, None),
                 Operation::Silent => {
                     eprintln!("Successfully loaded credentials file");
+                    // google_login::google_refresh(sj_token)
                     sj_token
                 }
             };
@@ -47,7 +48,7 @@ pub fn retrieve_credentials(save_file_path: &Path, operation: Operation) -> SJAc
 
             sj_token
         }
-    }).access_only()
+    }.access_only()
 }
 
 fn login(email: Option<String>, device_id: Option<String>) -> SJToken {
